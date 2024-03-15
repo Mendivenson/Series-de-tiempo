@@ -10,7 +10,7 @@ en [Rpubs](https://rpubs.com/Mendivenson).
 La entrega final del proyecto será la implementación de una aplicación en R (Shiny). Todos los detalles de la implementación a lo largo de los avances se encuentra
 en este repositorio:
 
-- **Avance 1:** Análisis descriptivo de las series de tiempo.
+- [**Avance 1:**](https://rpubs.com/Mendivenson/Avance1_STdU) Análisis descriptivo de las series de tiempo.
 
 
 
