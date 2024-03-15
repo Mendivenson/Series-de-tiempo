@@ -4,8 +4,7 @@
 ### Michel Mendivenson Barragán Zabala.
 
 En este repositorio se encuentra todo lo relacionado al proyecto llevado a cabo en la materia de series de tiempo univariadas de la Universidad Nacional de Colombia 
-en el semestre 2024-I a cargo del profesor [Sergio Calderón](sacalderonv@unal.edu.co). Estos avances también se encontraran en su versión ```html``` publicados 
-en [Rpubs](https://rpubs.com/Mendivenson).
+en el semestre 2024-I a cargo del profesor [Sergio Calderón](sacalderonv@unal.edu.co). Estos avances también se encuentran publicados en su versión ```html``` [Rpubs](https://rpubs.com/Mendivenson).
 
 La entrega final del proyecto será la implementación de una aplicación en R (Shiny). Todos los detalles de la implementación a lo largo de los avances se encuentra
 en este repositorio:
