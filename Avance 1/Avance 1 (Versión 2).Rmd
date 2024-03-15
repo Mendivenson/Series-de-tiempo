@@ -1,0 +1,570 @@
+---
+title: "Avance 1. Series de Tiempo Univariadas"
+subtitle: 'Universidad Nacional de Colombia'
+author: 
+  - name: "Michel Mendivenson Barragán Zabala"
+    email: 'mbarraganz@unal.edu.co'
+  - name: "Sharon Juliana Zambrano Ortiz"
+    email: 'shzambranoo@unal.edu.co'
+  - name: 'Nicolás Alejandro Quenguan Parra'
+    email: 'naquenguanp@unal.edu.co'
+  - name: 'Aryin Jair Torres Quiñones'
+    email: 'artorresq@unal.edu.co'
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::github_document
+  # html_document:
+  #   theme: simplex
+  #   toc: no
+  #   code_folding: hide
+  #   highlighting: github
+always_allow_html: true
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.align = 'center')
+```
+
+```{r LecturaLimpieza}
+# setwd(dirname(rstudioapi::getActiveDocumentContext()$path)); install.packages('readxl')
+oro = read.csv('../Datos/Serie histórica diaria por año (1994 - 2024).csv')
+leche = readxl::read_xlsx('../Datos/Volumen de Acopio Total  (2008 - 2023).xlsx', 
+                          sheet = 'VOLUMEN REGIONAL Y DEPTAL. ', 
+                          range = 'B29:AF221')
+
+oro = oro[(oro$Metal == 'Oro'),]
+oro_compra = oro[(oro$Métrica == 'Precio de Compra'),]
+oro_venta = oro[(oro$Métrica == 'Precio de Venta'),]
+rm(oro)
+
+# Para los datos de compra
+oro_compra = oro_compra[order(oro_compra$Fecha..DD.MM.AAAA.),]
+oro_compra$Valor = as.numeric(sub(',','.',oro_compra$Valor))
+
+# Para los datos de venta
+oro_venta = oro_venta[order(oro_venta$Fecha..DD.MM.AAAA.),]
+oro_venta$Valor = as.numeric(sub(',','.', oro_venta$Valor))
+```
+
+---
+  
+## **Los datos**
+  
+Las dos series escogidas corresponden a:
+  
+-   [La producción de leche mensual en Colombia (En el período 2008 a 2023)](http://uspleche.minagricultura.gov.co/documentos.html)
+-   [El precio de compra o venta diario del oro por gramo (En el período 2010 a Febrero de 2024)](https://www.banrep.gov.co/es/estadisticas/precios-del-dia-para-el-gramo-oro-plata-y-platino)
+
+```{r CreacionTS, class.source='fold-show'}
+# Con frecuencia mensual
+ts_leche = ts(leche$NACIONAL, start = c(2008,1), frequency = 12)/1000000
+
+# COn frecuencia diaria
+ts_compraOro = ts(oro_compra$Valor,start = c(1994,1), frequency = 365)/1000
+ts_ventaOro = ts(oro_venta$Valor,start = c(1994,1), frequency = 365)/1000
+```
+
+---
+
+<!-- ========================================== Sección 1 ==========================================  -->
+  
+## **Visualización de los datos** {.tabset}
+  
+### Volumen mensual de leche producido {.active}
+  
+```{r GraficaTSLeche, fig.align='center'}
+plot.ts(ts_leche, col = 'darkblue',
+        main = 'Volumen de leche producido en Colombia',
+        # sub = 'En millones de litros',
+        ylab = 'Volumen',
+        xlab = 'Tiempo')
+
+mtext(bquote(bold('En millones de litros')), side = 2, line = 2, adj = 0.5, cex = 0.8, col = 'darkgray')
+```
+
+No se observan cambios significativos en la varianza, pero sí se observa cierto grado de tendencia aunque no del todo lineal. Aunque la varianza no parece necesitar de una estabilización de todas formas se intenta estabilizar para ver si la serie cambia en algún aspecto importante luego de la transformación.
+
+### Precio diario del oro en Colombia
+
+```{r GraficaTSOro, fig.align='center'}
+plot.ts(ts_compraOro, xlab = 'Tiempo', ylab = 'Precio', main = 'Serie histórica precio del oro',
+        col = 'darkblue', cex = 0.5)
+lines(ts_ventaOro, col = 'darkred')
+legend('topleft',legend = c('Venta', 'Compra'), col = c('darkred', 'darkblue'),
+       lty = c(1,1), bty = 'n', cex = 1.1)
+mtext(bquote(bold('En miles de peso por gramo')), side = 2, line = 2, adj = 0.5, cex = 0.8, col = 'darkgray')
+```
+
+En la gráfica es posible observar que la serie cuenta con componentes de tendencia y también es posible concluir que la serie cuenta con heterocedasticidad marginal debido a que el rango de la variable va aumentando con el tiempo. Sin embargo, a simple vista (Y tal vez debido a la frecuencia) no es posible observar alguna señal de estacionalidad.
+
+###  {.unnumbered}
+
+<!-- ========================================== Sección 2 ==========================================  -->
+  
+## **Estabilización de la varianza** {.tabset}
+  
+### Volumen mensual de leche producido en Colombia {.active}
+  
+Para estabilizar la varianza, usamos la transformación Box-Cox con el $\lambda$ calculado en el siguiente código:
+  
+```{r LambdaLeche, class.source='fold-show', fig.align='center'}
+lambda_leche = MASS::boxcox(object = lm(ts_leche ~ 1), seq(0,8, length = 50))
+```
+
+```{r MaxLambdaLeche, echo = FALSE}
+lambda_leche = lambda_leche$x[which.max(lambda_leche$y)]
+cat('El valor de lambda calculado es: ', lambda_leche)
+```
+
+Note que no hay evidencia que nos diga que $\lambda$ pudiese ser 1 por lo que intentamos aplicar la transformación a la serie obteniendo ahora sí un $\lambda$ con posible valor de 1:
+  
+```{r EstabilizarLeche, class.source='fold-show', fig.align='center'}
+# lambda_leche = 2.25
+EstTS_leche = 1/(lambda_leche) * ts_leche^(lambda_leche) - 1
+
+MASS::boxcox(lm(EstTS_leche~1), seq(0,2, length = 50))
+```
+
+Sin embargo, si se revisan las gráficas de la serie y su transformación:
+  
+```{r GraficaLecheEstabilizada, fig.align='center', fig.height=5, fig.width=14, warning=FALSE}
+default_par = par()
+par(mfrow = c(1,2))
+plot.ts(ts_leche, xlab = 'Tiempo', ylab = NULL, main = 'Volumen de leche producido en Colombia', col = 'darkblue', cex = 0.5)
+mtext(bquote(bold('Datos originales(En millones de litros)')), side = 3, line = 0.5, adj = 0.5, cex = 0.8, col = 'darkgray')
+plot.ts(EstTS_leche, xlab = 'Tiempo', ylab = NULL, main = 'Volumen de leche producido en Colombia',
+        col = 'darkblue', cex = 0.5)
+mtext(bquote(bold('Datos tranformados por Box-Cox')), side = 3, line = 0.5, adj = 0.5, cex = 0.8, col = 'darkgray')
+
+par(default_par)
+```
+
+Es fácil notar de que la serie con la transformación, en esencia, la misma serie pero con un aumento importante en la escala por lo que se decide seguir utilizando los datos sin transformaciones para los procesos subsiguientes a este.
+
+### Precio diario de venta del oro en Colombia
+
+Como la serie del precio del oro mostró evidencia de una varianza inestable y que tiende a crecer con el tiempo es necesario obligatoriamente aplicar la transformación de Box-Cox para estabilizar la varianza. Además, se decide dejar solamente los datos del precio de venta del oro.
+
+```{r LambdaOro, class.source='fold-show',fig.align='center'}
+ts_oro = ts_ventaOro
+
+# install.packages('MASS')
+library(MASS)
+
+lambda_oro = MASS::boxcox(object = lm(ts_oro ~ 1), seq(-0.3,0.3, length = 50))
+```
+
+```{r MaxLambdaOro, echo = FALSE}
+lambda_oro = lambda_oro$x[which.max(lambda_oro$y)]
+cat('El valor de lambda calculado es: ', lambda_oro)
+```
+
+Efectivamente, no hay evidencia para creer que el valor de $\lambda$ sea 1 por lo que usamos la transformación de BoxCox con $\lambda = 0.06$ (i.e. $f(u_t) = \lambda^{-1} (u_t^{\lambda} - 1)$).
+
+```{r EstabilizarOro, class.source='fold-show', fig.align='center'}
+EstTS_oro = 1/(lambda_oro) * ts_oro^(lambda_oro) - 1
+
+MASS::boxcox(lm(EstTS_oro~1), seq(0,2, length = 50))
+```
+
+Note que ahora el intervalo contiene a 1 por lo que la transformación fue efectiva para estabilizar la varianza. Además, si revisamos la serie nuevamente podremos darnos cuenta de que efectivamente la varianza se estabilizó:
+  
+```{r GraficaOroEstabilizada, fig.align='center', fig.height=5, fig.width=14, warning=FALSE}
+default_par = par()
+
+par(mfrow = c(1,2))
+plot.ts(ts_ventaOro, xlab = 'Tiempo', ylab = NULL, main = 'Precio de venta del oro',
+        col = 'darkblue', cex = 0.5)
+mtext(bquote(bold('Datos originales(Miles de peso por gramo)')), side = 3, line = 0.5, adj = 0.5, cex = 0.8, col = 'darkgray')
+
+plot.ts(EstTS_oro, xlab = 'Tiempo', ylab = NULL, main = 'Precio de venta del oro',
+        col = 'darkblue', cex = 0.5)
+mtext(bquote(bold('Datos transformados por Box-Cox')), side = 3, line = 0.5, adj = 0.5, cex = 0.8, col = 'darkgray')
+par(default_par)
+```
+
+
+```{r}
+EstTS_leche = ts_leche
+```
+
+###  {.unnumbered}
+
+---
+  
+<!-- ========================================== Sección 3 ==========================================  -->
+  
+## **Eliminación de la tendencia** {.tabset}
+  
+### Volumen mensual de leche producida en Colombia {.active}
+  
+Usando el filtro de promedios móviles:
+  
+```{r MediasMovilesLeche, class.source='fold-show'}
+plot(decompose(EstTS_leche))
+```
+
+Es posible notar que los datos de esta serie presentan una tendencia no del todo lineal y que además la estacionalidad estimada por medio de este filtro parece ser la idonéa puesto que la componente residual no parece mostrar comportamiento estacional. Ahora bien, busquemos otra forma de ajustar la tendencia.
+
+Aún si la tendencia del filtro de promedios móviles no es totalmente lineal, podemos intentar estimar la tendencia de la serie por medio de una regresión lineal:
+  
+```{r AjusteLinealLeche, class.source='fold-show', fig.height=5, fig.width=14, warning=FALSE}
+par(mfrow = c(1,2))
+ModeloLinealLeche = lm(EstTS_leche ~ time(EstTS_leche))
+
+plot.ts(EstTS_leche, xlab = 'Tiempo', ylab = NULL, main = 'Volumen de leche producido en Colombia',
+        col = 'darkblue', cex = 0.5)
+mtext(bquote(bold('Ajuste con regresión lineal')), side = 3, line = 0.5, adj = 0.5, cex = 0.8, col = 'darkgray')
+abline(ModeloLinealLeche, col = 'red')
+
+# Los residuales
+NoTendAjusLinealLeche = EstTS_leche - predict(ModeloLinealLeche)
+plot.ts(NoTendAjusLinealLeche,xlab = 'Tiempo', ylab = NULL, main = 'Volumen de leche producido en Colombia',
+        col = 'darkblue', cex = 0.5)
+mtext(bquote(bold('Datos sin tendencia')), side = 3, line = 0.5, adj = 0.5, cex = 0.8, col = 'darkgray')
+
+par(default_par)
+```
+
+Si bien por medio de la regresión lineal la serie parece sufrir un cambio en su "tendencia" general también podría argumentarse que aún presenta algo de tendencia. Probemos ahora con el método *lowess* (Regresión del vecino más cercano):
+  
+```{r Regresión lowess, class.source='fold-show',fig.height=5, fig.width=14, warning=FALSE}
+par(mfrow = c(1,2))
+ModeloLowessLeche = lowess(EstTS_leche, f = 0.25)
+plot.ts(EstTS_leche, xlab = 'Tiempo', ylab = NULL, main = 'Volumen de leche producido en Colombia',
+        col = 'darkblue', cex = 0.5)
+mtext(bquote(bold('Ajuste con regresión local o lowess')), side = 3, line = 0.5, 
+      adj = 0.5, cex = 0.8, col = 'darkgray')
+lines(ModeloLowessLeche, col = 'red')
+
+# Datos sin tendencia
+NoTendAjusLowessLeche = EstTS_leche - ModeloLowessLeche$y
+plot.ts(NoTendAjusLowessLeche,xlab = 'Tiempo', ylab = NULL, main = 'Volumen de leche producido en Colombia',
+        col = 'darkblue', cex = 0.5)
+mtext(bquote(bold('Datos sin tendencia')), side = 3, line = 0.5, adj = 0.5, cex = 0.8, col = 'darkgray')
+
+par(default_par)
+```
+
+Claramente este método estima mucho mejor al tendencia de nuestros datos. Sin embargo, probemos con el método de *suavizamiento Kernel*:
+  
+```{r SuavizamientoKernelLeche,class.source='fold-show',fig.height=5, fig.width=14, warning=FALSE}
+par(mfrow = c(1,2))
+ModeloKernelLeche = ksmooth(y = as.numeric(EstTS_leche), x = time(EstTS_leche),kernel = 'normal', bandwidth = 2.5)
+plot.ts(EstTS_leche, xlab = 'Tiempo', ylab = NULL, main = 'Volumen de leche producido en Colombia',
+        col = 'darkblue', cex = 0.5)
+mtext(bquote(bold('Suavizado Kernel')), side = 3, line = 0.5, 
+      adj = 0.5, cex = 0.8, col = 'darkgray')
+lines(ModeloKernelLeche, col = 'red')
+
+# Datos sin tendencia
+NoTendAjusKernelLeche = EstTS_leche - ModeloKernelLeche$y
+plot(NoTendAjusKernelLeche,xlab = 'Tiempo', ylab = NULL, main = 'Volumen de leche producido en Colombia',
+     col = 'darkblue', cex = 0.5)
+mtext(bquote(bold('Datos sin tendencia')), side = 3, line = 0.5, adj = 0.5, cex = 0.8, col = 'darkgray')
+
+par(default_par)
+```
+
+Donde obtenemos un comportamiento muy similar al presentado con el método *lowess*. Finalmente, podemos aplicar el método *splines* solamente para estar seguros de que la tendencia demostrada antes sea la adecuada:
+  
+```{r AjusteSplinesLeche, class.source='fold-show',fig.height=5, fig.width=14, warning=FALSE}
+par(mfrow = c(1,2))
+
+ModeloSplinesLeche = smooth.spline(time(EstTS_leche), EstTS_leche, spar = 0.8)
+plot.ts(EstTS_leche, xlab = 'Tiempo', ylab = NULL, main = 'Volumen de leche producido en Colombia',
+        col = 'darkblue', cex = 0.5)
+mtext(bquote(bold('Suavizado Splines')), side = 3, line = 0.5, 
+      adj = 0.5, cex = 0.8, col = 'darkgray')
+lines(ModeloSplinesLeche, col = 'red')
+
+# plot(ModeloSplinesLeche, type = 'l')
+
+
+# Datos sin tendencia
+NoTendAjusSplinesLeche = EstTS_leche - ModeloSplinesLeche$y
+plot(NoTendAjusSplinesLeche,xlab = 'Tiempo', ylab = NULL, main = 'Volumen de leche producido en Colombia',
+     col = 'darkblue', cex = 0.5)
+mtext(bquote(bold('Datos sin tendencia')), side = 3, line = 0.5, adj = 0.5, cex = 0.8, col = 'darkgray')
+# for (i in 2008:2023){
+#   abline(v = i, col = '#8B8970', lty = 'dashed', pch = 2)
+# }
+
+
+par(default_par)
+```
+
+Como todos los tres métodos (*Lowess, Kernel y splines*) nos dan resultados similares, podemos usar cualquiera de los tres resultados para continuar con la estimación de la estacionalidad. En el caso particular de este documento, se estará utilizando la serie residual asociada al método de suavizamiento *Kernel*.
+
+### Precio diario de venta de oro en Colombia
+
+Primero ajustaremos una regresión lineal simple para verificar si es una buena forma de eliminar la tendencia de la serie pues presenta un comportamiento altamente lineal.
+
+```{r TendenciaLinealOro, class.source='fold-show', fig.align='center'}
+ModeloLinealOro = lm(EstTS_oro ~ time(EstTS_oro))
+
+plot.ts(EstTS_oro, xlab = 'Tiempo', ylab = NULL, main = 'Precio de venta del oro',
+        col = 'darkblue', cex = 0.5)
+mtext(bquote(bold('Datos transformados por Box-Cox')), side = 3, line = 0.5, adj = 0.5, cex = 0.8, col = 'darkgray')
+abline(ModeloLinealOro, col = 'red')
+```
+
+```{r AjusLinealOro, class.source='fold-show'}
+NoTendAjusLinealOro = EstTS_oro - predict(ModeloLinealOro)
+
+plot(NoTendAjusLinealOro)
+```
+
+###  {.unnumbered}
+
+---
+  
+<!-- ========================================== Sección 4 ==========================================  -->
+  
+## **Detección de la estacionalidad** {.tabset}
+  
+### Volumen mensual de leche producida en Colombia {.active}
+  
+Note que la serie demuestra cierto comportamiento cíclico con periodo anual, es decir, todos los mismos meses tiene el mismo comportamiento, siendo un comportamiento más obvio en el mes de Febrero:
+  
+  
+```{r SerieMesesDivididos, fig.width=18, fig.height=4, warning=FALSE}
+# par(mfrow = c(2,1))
+# Datos sin tendencia
+
+NoTendLeche = NoTendAjusKernelLeche
+par(cex.axis = 1, lwd = 1.5, mar = c(4,4,0.5,0.5))
+plot.ts(NoTendLeche,xlab = 'Tiempo', ylab = NULL, main = NULL,
+        col = 'darkblue', las = 2)#, xlim = c(2008,2016))
+#mtext(bquote(bold('Datos sin tendencia')), side = 3, line = 0.5, adj = 0.5, cex = 0.8, col = 'darkgray')
+for (i in 2008:2024){
+  abline(v = i, col = '#8B8970', lty = 'dashed', pch = 2)
+}
+
+axis(1, at = 2008:2024, labels = 2008:2024,las = 2)
+# plot(NoTendAjusSplinesLeche,xlab = 'Tiempo', ylab = NULL, main = NULL,
+#      col = 'darkblue', cex = 0.5, xlim = c(2016,2023))
+# for (i in 2008:2023){
+#   abline(v = i, col = '#8B8970', lty = 'dashed', pch = 2)
+par(lwd = 1)
+for (i in time(NoTendLeche)){
+  abline(v = i, col = '#CDC9A5', lty = 4)
+}
+par(default_par)
+```
+
+Si bien no es del todo perceptible a simple vista, podemos notar que, por ejemplo en los meses de Febrero siempre se registran los picos más bajos de la serie en ese año mientras que en los meses de Junio o Julio se presenta los valores más altos de la serie. Es decir, podemos más o menos intuir que habrá un período anual. Ahora bien, revisemos el acf de la serie:
+
+```{r acfMuestralLeche}
+acf(NoTendLeche, lag.max = 56, main = 'Serie volumen de leche mensual')
+mtext(bquote(bold('Datos sin tendencia ajustados con kernel')), side = 3, line = 0.5, adj = 0.5, cex = 0.8, col = 'darkgray')
+```
+Nuevamente, el acf nos sugiere un componente estacional. Indaguemos más sobre la estacionalidad anual de la serie:
+  
+```{r  MonthlyGraphsLeche, fig.width=10}
+df = as.data.frame(NoTendLeche)
+colnames(df) = c('Volume')
+month = as.numeric(rownames(df)) %% 12
+month[month == 0] = 12
+df$'Month' = month.name[month]
+
+SerieDataframe = data.frame(row.names = month.name[1:12])
+for (i in month.name[1:12]){
+  SerieDataframe[i,1:16] = df$Volume[df$Month == i]
+}
+
+rm(df)
+SerieDataframe = t(SerieDataframe)
+rownames(SerieDataframe) = 2008:2023
+boxplot(SerieDataframe,las = 2, cex.axis = 0.8, main = 'Boxplot mensual (Volumen de leche)')
+mtext(bquote(bold('Diágnostico de estacionalidad')),
+      side = 3, line = 0.3, adj = 0.5, cex = 0.8, col = 'darkgray')
+```
+
+El gráfico *boxplot* mensual nos muestra precisamente que uno de los meses para los que pudieramos argumentar un cambio importante en la media es febrero siendo el mes con la media más baja de todos. Además, vemos que como se mencionó anteriormente el ciclo que se parece cumplir año a año es una disminución importante en el mes de Febrero y una recuperación en los meses sucesivos a este hasta llegar a Noviembre que representa una caída de menor impacto que la del mes de febrero. Si revisamos el gráfico de coordenadas paralelas para los meses nos encontraremos con algo muy similar:
+
+```{r SeasonalPlotLeche, fig.width=8, message=FALSE, warning=FALSE}
+library(forecast)
+ggseasonplot(NoTendLeche, main = 'Coordenadas paralelas: Volumen de leche mensual')
+monthplot(NoTendLeche, ylab = '', main = 'Volumen de leche captada por la industria')
+mtext(bquote(bold('Sub series mensuales')),
+      side = 3, line = 0.3, adj = 0.5, cex = 0.8, col = 'darkgray')
+par(default_par)
+```
+
+Sin embargo, no sobra revisar el periodograma para determinar si la serie cuenta con ciclos de otros períodos:
+
+```{r SpectrumLeche}
+library(latex2exp)
+SpectrumLeche = spectrum(NoTendLeche, log = 'no', main = 'Periodogram')
+mtext(TeX('Frequency $\\times$ 12', bold = T),
+      side = 3, line = 0.5, adj = 0.5, cex = 0.8, col = 'darkgray')
+
+frecuencias = SpectrumLeche$freq
+Periodograma = SpectrumLeche$spec
+
+for (i in 1:3){
+  ind = which.max(Periodograma)
+  cat('El valor máximo no.', i, ' en el que se máximiza el periodograma es', Periodograma[ind], '\nen la frecuencia ', frecuencias[ind],'\n')
+  abline(v = frecuencias[ind], col = 'darkred', lty = 2)
+  Periodograma = Periodograma[-ind]
+  frecuencias = frecuencias[-ind]
+}
+```
+Note que la frecuencia en que se maximiza el espectograma es aquella que ya habíamos señalado como probable: la equivalente a un período de un año ($\omega = 1 \times \frac{1}{12}$). Además de esta, el segundo valor mayor representa un ciclo de período 24 meses ($\omega = 0.5 \times \frac{1}{12} = \frac{1}{24}$) que es un armónico del primero por lo que el ciclo principal de la serie se da en períodos de una año.
+
+
+```{r Heatmap Leche, fig.height=6, fig.width=8, message=FALSE}
+library(TSstudio)
+ts_heatmap(NoTendLeche,title = 'Heatmap Volumen de leche captado serie mensual')
+```
+
+### Precio diario de venta de oro en Colombia 
+
+###  {.unnumbered}
+
+<!-- ========================================== Sección 4 ==========================================  -->
+  
+## **Eliminación de la componente estacional** {.tabset}
+
+### Volumen mensual de leche producida en Colombia {.active}
+
+Ahora sólo nos resta eliminar la componente estacional de la serie. Para esto utilizaremos dos modelos de componentes de Fourier y un modelo de variables dummy:
+
+```{r Componente Estacional Leche, class.source='fold-show', fig.width=16, fig.height=10, warning=FALSE, message=FALSE}
+library(tsibble)
+library(tibble)
+library(tidyverse)
+library(tsibble)
+library(fable)
+library(fabletools)
+library(TSA)
+library(dplyr)
+
+TsibbleLeche = as_tsibble(NoTendLeche)
+
+
+ModelosEstacionalidadLeche<-TsibbleLeche%>%model(
+  'Fourier (2 Componentes)'=ARIMA(value ~ fourier(K=2)+pdq(0, 0, 0) + PDQ(0, 0, 0)),
+  'Fourier (3 Componentes)'=ARIMA(value ~ fourier(K=3)+pdq(0, 0, 0) + PDQ(0, 0, 0)),
+  'Fourier (4 Componentes)'=ARIMA(value ~ fourier(K=4)+pdq(0, 0, 0) + PDQ(0, 0, 0)),
+  'Dummy'=ARIMA(value ~ season()+pdq(0, 0, 0) + PDQ(0, 0, 0))
+)
+
+
+ModelosAjustadosEstacionalidadLeche<-TsibbleLeche%>%
+  left_join(fitted(ModelosEstacionalidadLeche)|>group_by(.model)%>%
+                                                     pivot_wider(names_from = .model, values_from = .fitted))
+
+par(mfrow = c(4,1), mar = c(2,2.5,3,0.5))
+ModelosAjustadosEstacionalidadLeche = as.data.frame(ModelosAjustadosEstacionalidadLeche)
+
+for (i in  colnames(ModelosAjustadosEstacionalidadLeche[,3:6])){
+  # cat("###", paste('Modelo', i), "\n")
+  plot(x = as.numeric(time(NoTendLeche)), 
+        y = ModelosAjustadosEstacionalidadLeche[,i] , col = 'darkred',
+       type = 'l', main = paste('Datos originales vs. Valores ajustados: ', i), ylim = c(-45,45), xlab = '', ylab = '', lwd = 2)
+  lines(x = as.numeric(time(NoTendLeche)), y = as.numeric(NoTendLeche), col = 'black', lwd = 0.7)
+}
+```
+
+A simple vista, parece ser que el modelo dummy ajusta mejor la estacionalidad anual de nuestros datos. Sin embargo, la mejor opción es siempre valerse de criterios de información para decidir cuál de nuestros modelos es mejor:
+
+```{r GraficosModelos}
+# install.packages('DT')
+knitr::kable(glance(ModelosEstacionalidadLeche), col.names = c('Modelo', '$\\sigma ^2$', 'Log-verosimilitud', 'AIC', 'AICc', 'BIC', '',''))
+```
+
+Observamos que, de todos los aspectos medidos, la regresión dummy parece ser aquella que lo hace mejor por lo cual revisaremos qué coeficientes esta regresión ha estimado:
+
+```{r Coeficientes Dummy Leche}
+knitr::kable(ModelosEstacionalidadLeche %>% select(Dummy) %>%  coef())
+```
+
+Note que la variable de base o de comparación es la variable de Enero.
+
+
+<div style="height: 15px;"></div>
+
+
+<details>
+  <summary> Ajuste con variables dummy usando la función ``lm`` </summary>
+  <hr>
+  
+    ```{r LMDummyLechem, class.source = 'fold-show'}
+    df_dummy = as.data.frame(cbind(value = as.numeric(NoTendLeche), month = rep(1:12, 16)))
+    RegresionDummy = lm(value ~ factor(month) - 1, data = df_dummy)
+    summary(RegresionDummy)
+    ```
+    
+```{r Plot dummy leche lm, fig.width=15, fig.height=5}
+plot.ts(NoTendLeche, col = 'darkblue', xlab = 'Tiempo', ylab = '', main = 'Serie de tiempo volumen de leche captado por la industria colombiana')
+lines(x = as.numeric(time(NoTendLeche)), y = fitted(RegresionDummy), col = 'darkred', lwd = 2)
+legend('topright', legend = c('Valores reales', 'Valores ajustados'),col = c('darkblue', 'darkred'), lty = 1,lwd = c(1,2), bty = 'n',cex = 0.8)
+```
+Note que los resultados son exactamente los mismos obtenidos en comparación con los obtenido del método usado anteriormentem con la diferencia de que en este caso podríamos eliminar variables para verificar si la inclusión de estas en el modelo lo afecta de forma significativa respecto a sus medidas de calidad (AIC, AICc,BIC, etc.). Aunque por el momento no revisaremos esto.
+
+<hr>
+</details> 
+
+
+<div style="height: 15px;"></div>
+
+Veamos más de cerca el ajuste por variables dummy alcanzado respecto a la estacionalidad de nuestra serie:
+
+```{r DummyVsOriginales1, fig.width=18, fig.height=4}
+par(mar = c(5,4,4,8))
+plot(time(NoTendLeche)[1:97],NoTendLeche[1:97], type = 'l', lwd = 1, main = 'Datos originales vs. Valores ajustados con variables dummy',
+     ylab = '', xlab = 'Tiempo')
+mtext(bquote(bold('Enero 2008 - Enero 2016')),
+      side = 3, line = 0.3, adj = 0.5, cex = 0.8, col = 'darkgray')
+lines(time(NoTendLeche)[1:97], ModelosAjustadosEstacionalidadLeche$Dummy[1:97], col = 'darkred', lwd = 2)
+legend('right',legend = c('Datos\noriginales\n', 'Valores\najustados\n'), col = c('black', 'darkred'), lty = 1,
+       xpd = T, inset = c(-0.1, 0), bty = 'n', lwd= c(1,2))
+abline(v = 2008:2023, col = 'gray', lty = 'dashed')
+abline(h = 0, col = 'black', lwd = 0.3)
+```
+
+```{r DummyVsOriginales2, fig.width=18, fig.height=4}
+par(mar = c(5,4,4,8))
+plot(time(NoTendLeche)[97:192],NoTendLeche[97:192], type = 'l', lwd = 1, main = 'Datos originales vs. Valores ajustados con variables dummy',
+     ylab = '', xlab = 'Tiempo')
+mtext(bquote(bold('Enero 2016 - Diciembre 2023')),
+      side = 3, line = 0.3, adj = 0.5, cex = 0.8, col = 'darkgray')
+lines(time(NoTendLeche)[97:192], ModelosAjustadosEstacionalidadLeche$Dummy[97:192], col = 'darkred', lwd = 2)
+abline(v = 2008:2023, col = 'gray', lty = 'dashed')
+abline(h = 0, col = 'black', lwd = 0.3)
+legend('right',legend = c('Datos\noriginales\n', 'Valores\najustados\n'), col = c('black', 'darkred'), lty = 1,
+       xpd = T, inset = c(-0.1, 0), bty = 'n', lwd= c(1,2))
+```
+
+Habiendo hecho todo lo anterior, la serie con varianza estabilizada, sin tendencia y desestacionalizada resulta de la siguiente forma:
+
+```{r FinalLeche, fig.width=17, fig.height=4}
+plot.ts(NoTendLeche - ModelosAjustadosEstacionalidadLeche$Dummy, col = 'black',
+        main = 'Serie volumen de leche captado por la industria colombiana',
+        # sub = 'En millones de litros',
+        ylab = '', xaxt = 'n',
+        xlab = 'Tiempo')
+axis(labels = 2008:2024, at = 2008:2024, side = 1, las = 2)
+abline(v = 2008:2024, col = 'gray', lty = 'dashed', lwd = 1.5)
+
+mtext(bquote(bold('Sin tendencia y desestacionalizada')), side = 1, line = -12.3, adj = 0.5, cex = 0.8, col = 'darkgray')
+```
+
+
+
+
+### Precio diario de venta de oro en Colombia 
+
+
+
+
+
+
+
+
+
+
+
