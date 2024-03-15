@@ -4,6 +4,7 @@
 2024-03-15
 
 ---
+### Autores:
 
 - [Michel Mendivenson Barragán Zabala](mbarraganz@unal.edu.co)
 - [Sharon Juliana Zambrano Ortiz](shzambranoo@unal.edu.co)
