@@ -25,4 +25,4 @@ Para el proyecto se usarán dos series (Una de frecuencia diaria y la otra mensu
 
 **Nota 1:** Hacer todo dentro de ```.Rmd``` se ve bonito. Sin embargo, es una mucho mejor idea hacer los scripts por aparte de cada cosa y después llamar los resultados dentro del ```html```. De esa forma mucho del código innecesario (Como el de las gráficas boxplot) ni se ve en el documento final ni ocupa espacio en el archivo ```.Rmd```
 
-**Nota 2:** Creo que, de hecho, hay una opción dentro de los chunks de código de ``R`` que permite a los chunks imprimir código de otros scripts.
+**Nota 2:** Creo que, de hecho, hay una opción dentro de los chunks de código de ``R`` que permite a los chunks imprimir código de otros scripts. [Puede revisarse acá](https://stackoverflow.com/questions/52397430/include-code-from-an-external-r-script-run-in-display-both-code-and-output)
