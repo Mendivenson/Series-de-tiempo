@@ -1,17 +1,7 @@
-# Avance 1. Series de Tiempo Univariadas
-## Departamento de Estadística. Facultad de Ciencias
-### Universidad Nacional de Colombia
-2024-03-15
-
----
-### Autores:
-
-- [Michel Mendivenson Barragán Zabala](mbarraganz@unal.edu.co)
-- [Sharon Juliana Zambrano Ortiz](shzambranoo@unal.edu.co)
-- [Nicolás Alejandro Quenguan Parra](naquenguanp@unal.edu.co)
-- [Aryin Jair Torres Quiñones](artorresq@unal.edu.co)
-
----
+Avance 1. Series de Tiempo Univariadas
+================
+truetruetruetrue
+2024-03-17
 
 ``` r
 # setwd(dirname(rstudioapi::getActiveDocumentContext()$path)); install.packages('readxl')
