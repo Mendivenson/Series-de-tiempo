@@ -12,6 +12,9 @@
 - [Aryin Jair Torres Quiñones](artorresq@unal.edu.co)
 
 ---
+**Nota:** Algunos de los widgets generados en el documento final sólo renderizan en la versión html de forma apropiada, por lo que es mejor revisar la versión de RPubs de este documento.
+
+---
 
 ``` r
 # setwd(dirname(rstudioapi::getActiveDocumentContext()$path)); install.packages('readxl')
