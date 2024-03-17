@@ -13,38 +13,36 @@ author:
 date: "`r Sys.Date()`"
 output: 
   rmarkdown::github_document
-  # html_document:
-  #   theme: simplex
-  #   toc: no
-  #   code_folding: hide
-  #   highlighting: github
+#   html_document:
+#     theme: simplex
+#     toc: no
+#     code_folding: hide
+#     highlighting: github
 always_allow_html: true
 ---
 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, fig.align = 'center')
+library(dplyr)
 ```
 
 ```{r LecturaLimpieza}
 # setwd(dirname(rstudioapi::getActiveDocumentContext()$path)); install.packages('readxl')
-oro = read.csv('../Datos/Serie histórica diaria por año (1994 - 2024).csv')
 leche = readxl::read_xlsx('../Datos/Volumen de Acopio Total  (2008 - 2023).xlsx', 
                           sheet = 'VOLUMEN REGIONAL Y DEPTAL. ', 
                           range = 'B29:AF221')
 
-oro = oro[(oro$Metal == 'Oro'),]
-oro_compra = oro[(oro$Métrica == 'Precio de Compra'),]
-oro_venta = oro[(oro$Métrica == 'Precio de Venta'),]
-rm(oro)
-
-# Para los datos de compra
-oro_compra = oro_compra[order(oro_compra$Fecha..DD.MM.AAAA.),]
-oro_compra$Valor = as.numeric(sub(',','.',oro_compra$Valor))
-
-# Para los datos de venta
-oro_venta = oro_venta[order(oro_venta$Fecha..DD.MM.AAAA.),]
-oro_venta$Valor = as.numeric(sub(',','.', oro_venta$Valor))
+datos <- read.csv(file = '../Datos/Serie histórica diaria por año (1994 - 2024).csv')
+datos <- datos %>% rename(Fecha = Fecha..DD.MM.AAAA.)
+datos <- datos %>%
+  dplyr::filter(Metal == "Oro", Métrica == "Precio de Venta") %>%
+  dplyr::arrange(Fecha) %>%
+  dplyr::select(Fecha, Valor)
+datos$Fecha <- as.Date(datos$Fecha)
+datos$Valor <- as.numeric(gsub(',','.',datos$Valor))
+# Tomamos los datos desde el año 2004 hasta la última fecha
+datos2 <- datos[datos$Fecha >= as.Date('2004-01-01'),]
 ```
 
 ---
@@ -61,8 +59,7 @@ Las dos series escogidas corresponden a:
 ts_leche = ts(leche$NACIONAL, start = c(2008,1), frequency = 12)/1000000
 
 # COn frecuencia diaria
-ts_compraOro = ts(oro_compra$Valor,start = c(1994,1), frequency = 365)/1000
-ts_ventaOro = ts(oro_venta$Valor,start = c(1994,1), frequency = 365)/1000
+tsventa <- ts(data = datos2$Valor, start = c(2004,1),frequency = 365)
 ```
 
 ---
@@ -88,12 +85,7 @@ No se observan cambios significativos en la varianza, pero sí se observa cierto
 ### Precio diario del oro en Colombia
 
 ```{r GraficaTSOro, fig.align='center'}
-plot.ts(ts_compraOro, xlab = 'Tiempo', ylab = 'Precio', main = 'Serie histórica precio del oro',
-        col = 'darkblue', cex = 0.5)
-lines(ts_ventaOro, col = 'darkred')
-legend('topleft',legend = c('Venta', 'Compra'), col = c('darkred', 'darkblue'),
-       lty = c(1,1), bty = 'n', cex = 1.1)
-mtext(bquote(bold('En miles de peso por gramo')), side = 2, line = 2, adj = 0.5, cex = 0.8, col = 'darkgray')
+plot(tsventa/1000, main='Histórico precio de venta gramo de oro',ylab='Precio en miles de pesos', xlab='Año')
 ```
 
 En la gráfica es posible observar que la serie cuenta con componentes de tendencia y también es posible concluir que la serie cuenta con heterocedasticidad marginal debido a que el rango de la variable va aumentando con el tiempo. Sin embargo, a simple vista (Y tal vez debido a la frecuencia) no es posible observar alguna señal de estacionalidad.
@@ -144,46 +136,33 @@ Es fácil notar de que la serie con la transformación, en esencia, la misma ser
 
 ### Precio diario de venta del oro en Colombia
 
-Como la serie del precio del oro mostró evidencia de una varianza inestable y que tiende a crecer con el tiempo es necesario obligatoriamente aplicar la transformación de Box-Cox para estabilizar la varianza. Además, se decide dejar solamente los datos del precio de venta del oro.
+Según el gráfico anterior, no parece existir una mayor fluctación en el rango del precio a lo largo del tiempo. Sin embargo se realizará la prueba de Box-Cox para verificar. Vamos a ver si presenta variación marginal.
 
 ```{r LambdaOro, class.source='fold-show',fig.align='center'}
-ts_oro = ts_ventaOro
+# Método de Guerrero
+ # g <- forecast::BoxCox.lambda(tsventa, method = 'guerrero', lower = -3, upper = );g
+# 
+# g_tsventa <- g^(-1) * (tsventa^g -1)
+# 
+# plot(g_tsventa)
 
-# install.packages('MASS')
-library(MASS)
+# Método de LMV
+ll<- forecast::BoxCox.lambda(tsventa, method = 'loglik', lower = -2, upper = 1.5);ll
+MASS::boxcox(lm(tsventa ~ 1),seq(-0.2, 0.3, length = 50))
 
-lambda_oro = MASS::boxcox(object = lm(ts_oro ~ 1), seq(-0.3,0.3, length = 50))
+# ll_tsventa <- ll^(-1) * (tsventa^ll -1)
+# ll_tsventa <- BoxCox(ll_tsventa,ll)
+ll_tsventa <- log(tsventa)
+```
+Dado que $\lambda\neq 1$, , entonces si se necesita estabilizar la varianza. Como el valor de $\lambda = 0$ se realizara la transformación logaritmo natural.
+
+```{r LambdaOro2, class.source='fold-show',fig.align='center'}
+# ll_tsventa <- log(tsventa)
+plot(ll_tsventa)
+MASS::boxcox(lm(ll_tsventa ~ 1),seq(-2, 4, length = 50))
 ```
 
-```{r MaxLambdaOro, echo = FALSE}
-lambda_oro = lambda_oro$x[which.max(lambda_oro$y)]
-cat('El valor de lambda calculado es: ', lambda_oro)
-```
-
-Efectivamente, no hay evidencia para creer que el valor de $\lambda$ sea 1 por lo que usamos la transformación de BoxCox con $\lambda = 0.06$ (i.e. $f(u_t) = \lambda^{-1} (u_t^{\lambda} - 1)$).
-
-```{r EstabilizarOro, class.source='fold-show', fig.align='center'}
-EstTS_oro = 1/(lambda_oro) * ts_oro^(lambda_oro) - 1
-
-MASS::boxcox(lm(EstTS_oro~1), seq(0,2, length = 50))
-```
-
-Note que ahora el intervalo contiene a 1 por lo que la transformación fue efectiva para estabilizar la varianza. Además, si revisamos la serie nuevamente podremos darnos cuenta de que efectivamente la varianza se estabilizó:
-  
-```{r GraficaOroEstabilizada, fig.align='center', fig.height=5, fig.width=14, warning=FALSE}
-default_par = par()
-
-par(mfrow = c(1,2))
-plot.ts(ts_ventaOro, xlab = 'Tiempo', ylab = NULL, main = 'Precio de venta del oro',
-        col = 'darkblue', cex = 0.5)
-mtext(bquote(bold('Datos originales(Miles de peso por gramo)')), side = 3, line = 0.5, adj = 0.5, cex = 0.8, col = 'darkgray')
-
-plot.ts(EstTS_oro, xlab = 'Tiempo', ylab = NULL, main = 'Precio de venta del oro',
-        col = 'darkblue', cex = 0.5)
-mtext(bquote(bold('Datos transformados por Box-Cox')), side = 3, line = 0.5, adj = 0.5, cex = 0.8, col = 'darkgray')
-par(default_par)
-```
-
+Al realizar una segunda prueba a la serie transformada obtenemos la confirmación que 1 pertenece al intervalo de confianza para $\lambda$ . Aunque parece no haber cambios evidentes en la gráfica, procederemos a trabajar con la serie transformada.
 
 ```{r}
 EstTS_leche = ts_leche
@@ -299,22 +278,147 @@ Como todos los tres métodos (*Lowess, Kernel y splines*) nos dan resultados sim
 
 ### Precio diario de venta de oro en Colombia
 
-Primero ajustaremos una regresión lineal simple para verificar si es una buena forma de eliminar la tendencia de la serie pues presenta un comportamiento altamente lineal.
+Exploramos los diferentes métodos para estimar la tendencia, entre ellos, regresión lineal simple, splines, kernel y LOESS, ninguno resulto ser efectivo, pues las series resultantes sin tendencias no parecían ser estacionarias en el sentido débil. Por esta razón se utilizó la serie diferenciada a 1 rezago.
 
-```{r TendenciaLinealOro, class.source='fold-show', fig.align='center'}
-ModeloLinealOro = lm(EstTS_oro ~ time(EstTS_oro))
+```{r TendenciaLinealOro, class.source='fold-show'}
+fit_lltsventa<- lm(ll_tsventa~time(ll_tsventa), na.action=NULL)
+plot.ts(ll_tsventa,
+        main = "Estimación de la tendencia modelo lineal normal",
+        ylab = 'Log(Precio)',
+        xlab = 'Años')
+abline(fit_lltsventa, col = "red")
 
-plot.ts(EstTS_oro, xlab = 'Tiempo', ylab = NULL, main = 'Precio de venta del oro',
-        col = 'darkblue', cex = 0.5)
-mtext(bquote(bold('Datos transformados por Box-Cox')), side = 3, line = 0.5, adj = 0.5, cex = 0.8, col = 'darkgray')
-abline(ModeloLinealOro, col = 'red')
+notenden_lltsventa <- ll_tsventa - predict(fit_lltsventa)
+plot(notenden_lltsventa, main='Serie sin tendencia modelo lineal normal',xlab='Año',ylab='Log(precio)')
+```
+La estimación usando el modelo lineal no fue efectiva para explicar la tendencia en algunos años,2005 al 2006, 2010 al 2012, 2015 al 2017 .
+
+Se usara regresión LOESS para estimar la tendencia.
+
+```{r TendenciaLOESSOro, class.source='fold-show'}
+library(tsibble)
+library(timetk)
+library(tidyverse)
+library(feasts)
+library(fable)
+
+df_ll_tsventa<-data.frame(Fecha=datos2$Fecha,ll_tsventa=as.matrix(ll_tsventa))
+df_tsventa=data.frame(Fecha=datos2$Fecha,Precioro=as.matrix(datos2$Valor))
+
+str(df_tsventa)
+
+tibble_lltsventa <- tibble(df_ll_tsventa)
+
+tsibble_tsventa <- as_tsibble(df_tsventa)
+
+tibble_lltsventa%>%timetk::plot_time_series(Fecha, ll_tsventa, 
+                   .interactive = TRUE,
+                   .plotly_slider = TRUE)
+
+# Ajuste Loess
+tibble_lltsventa%>%
+  mutate( lltsventa_ajus = smooth_vec(ll_tsventa,span = 0.60, degree = 2) )
+
+
+# Gráfico estimación LOESS
+g1 <- tibble_lltsventa%>%
+  mutate(lltsventa_ajus = smooth_vec(ll_tsventa,span = 0.17 , degree = 2))%>%
+  ggplot(aes(Fecha, ll_tsventa)) +
+    geom_line() +
+    geom_line(aes(y = lltsventa_ajus), color = "red") +
+    labs(title = 'Estimación de la tendencia por LOESS',
+         x = 'Años',
+         y = 'Log(precio)')
+
+
+# Primera llamada a smooth_vec() y almacenamiento de las estimaciones
+tibble_lltsventa <- tibble_lltsventa %>%
+  mutate(lltsventa_ajus_1 = smooth_vec(ll_tsventa, span = 0.17, degree = 2))
+
+# Segunda llamada a smooth_vec() y almacenamiento de las estimaciones
+# tibble_lltsventa <- tibble_lltsventa %>%
+#   mutate(lltsventa_ajus_2 = smooth_vec(ll_tsventa, span = 0.12, degree = 2))
+
+ 
+
+NoTendLOESS <- ll_tsventa - as.numeric(tibble_lltsventa$lltsventa_ajus_1)
+
+# NoTendLOESS2 <- ll_tsventa - as.numeric(tibble_lltsventa$lltsventa_ajus_2)
+
+plot.ts(NoTendLOESS, main='Serie sin tendencia LOESS',xlab='Año',ylab='Log(precio)')
+# plot.ts(NoTendLOESS2, main='Serie sin tendencia LOESS',xlab='Año',ylab='Log(precio)')
+
+acf(NoTendLOESS,lag.max = 60)
+
+# STL
+
+tsibble_tsventa %>%
+  model(
+    STL(log(Precioro) ~ trend() +
+                   season(window = "periodic"),
+    robust = TRUE)) %>%
+  components() %>%
+  autoplot()
+
+modelo_stl <- tsibble_tsventa %>%
+  model(STL(log(Precioro) ~ trend() + season(window = "periodic"), robust = TRUE))
+
+# Estimación de la tendencia por STL
+componentes <- components(modelo_stl)
+
+NoTendSTL <- ll_tsventa - componentes$trend
+
+plot(NoTendSTL, main='Serie sin tendencia STL',xlab='Año',ylab='Log(precio)')
+```
+Usando regresión por splines
+
+```{r TendenciaSplinesOro, class.source='fold-show'}
+# 0.40
+Spline_lltsventa <- smooth.spline(x = time(ll_tsventa),y = ll_tsventa,spar = 0.80)
+
+NoTendSPLINE <- ll_tsventa - Spline_lltsventa$y
+
+plot(ll_tsventa, main='Estimación de la tendencia por splines', ylab='log(precio)',xlab='Año')
+lines(x = Spline_lltsventa$x, y=Spline_lltsventa$y, col = 'red')
+plot(NoTendSPLINE, main='Serie sin tendencia SPLINES',xlab='Año',ylab='Log(precio)')
+# acf(NoTendSPLINE,lag.max = 60)
 ```
 
-```{r AjusLinealOro, class.source='fold-show'}
-NoTendAjusLinealOro = EstTS_oro - predict(ModeloLinealOro)
+Usando regresión Kernel
 
-plot(NoTendAjusLinealOro)
+```{r TendKernelOro,class.source='fold-show',message=FALSE, warning=FALSE}
+ker_lltsventa <- ksmooth(x = time(ll_tsventa),y =ll_tsventa,kernel = 'normal',bandwidth = 0.49 )
+plot(ll_tsventa)
+lines(x = ker_lltsventa$x,y = ker_lltsventa$y,col='red')
+
+NoTendKer <- ll_tsventa - ker_lltsventa$y
+
+# acf(NoTendKer,lag.max = 60)
+
+plot(NoTendKer ,main='Serie sin tendencia Kernel',xlab='Año',ylab='Log(precio)')
 ```
+
+Se realiza el test de Dickey - Fuller para verificar la presencia de raíces unitarias, lo cual implica que la serie no es estacionaria; características como la media y varianza pueden cambiar con el tiempo. La presencia de una raíz unitaria sugiere que la tendencia de la serie es estocástica y no determinística.
+
+Utilizamos la prueda de Dickey-Fuller aumentada para detectar la presencia de raíces unitarias
+
+```{r SerieDiffOro, class.source='fold-show'}
+# Serie diferenciada
+dif_ll_tsventa <- diff(ll_tsventa,lag = 1)
+# Modelo autoregresivo a 1 rezago
+ar(ll_tsventa)
+# Prueba de Dickey-Fuller
+tseries::adf.test(ll_tsventa,k=3)
+
+# Modelo autoregresivo y prueba a la serie diferenciada
+ar(dif_ll_tsventa)
+tseries::adf.test(dif_ll_tsventa)
+
+plot(dif_ll_tsventa)
+```
+
+Se ajustó un modelo auto-regresivo a la serie con varianza estabilizada, como el coeficiente $\phi=0.9995$ para el primer rezago, es característica de que cada valor de la serie está muy correlacionado con su valor inmediatamente anterior. Se realiza el test de Dickey - Fuller, y con una significancia del 5% no se rechaza la hipótesis nula; la serie no es estacionaria. Por lo tanto se procede a diferenciar la serie a 1 rezago, y se vuelve a aplicar el modelo y la prueba.
+
 
 ###  {.unnumbered}
 
@@ -422,6 +526,115 @@ ts_heatmap(NoTendLeche,title = 'Heatmap Volumen de leche captado serie mensual')
 
 ### Precio diario de venta de oro en Colombia 
 
+```{r EstacionalidadOro,class.source='fig-show', message=FALSE, warning=FALSE}
+# ACF, PACF
+
+acf(dif_ll_tsventa,lag.max = 60, main='Serie diferenciada')
+acf(NoTendKer,lag.max = 60, main='Serie sin tendecia Kernel')
+pacf(dif_ll_tsventa,lag.max = 60 , main='Serie diferenciada')
+PeriodogrNoTendDif <- spectrum(dif_ll_tsventa, main = "Periodograma serie diferenciada", log = "no")
+
+# Funcion para calcular el periodo
+find.freq <- function(x)
+    {
+        n <- length(x)
+        spec <- spec.ar(c(x),plot=FALSE)
+        if(max(spec$spec)>10) # Arbitrary threshold chosen by trial and error.
+        {
+            period <- round(1/spec$freq[which.max(spec$spec)])
+            if(period==Inf) # Find next local maximum
+            {
+                j <- which(diff(spec$spec)>0)
+                if(length(j)>0)
+                {
+                    nextmax <- j[1] + which.max(spec$spec[j[1]:500])
+                    period <- round(1/spec$freq[nextmax])
+                }
+                else
+                    period <- 1
+            }
+        }
+        else
+            period <- 1
+        return(period)
+    }
+
+find.freq(dif_ll_tsventa)
+# Para la serie sin tendencia diferenciada
+PeriodogrNoTendDif <- spectrum(dif_ll_tsventa, main = "Periodograma S.Diferenciada", log = "no")
+abline(v = PeriodogrNoTendDif$freq[match(max(PeriodogrNoTendDif$spec),PeriodogrNoTendDif$spec)], col='red')
+
+# periodograma <- PeriodogrNoTendDif
+# max(PeriodogrNoTendDif$spec)
+# periodograma$freq[match(max(periodograma$spec),periodograma$spec)]
+# periodo=1/periodograma$freq[match(max(periodograma$spec),periodograma$spec)]
+# periodo
+```
+
+Con los motivos mencionados anteriormente y con base en el ACF, los valores decrecen rápidamente y caen dentro de las bandas de confianza; sugiriendo que la correlación es significativamente 0, con lo cual la primera diferenciación fue exitosa para remover la tendencia.
+
+```{r BoxPLot cada 4 años}
+
+start_date <- as.Date("2004-01-01")  
+dates <- seq.Date(from = start_date, by = "day", length.out = length(NoTendSTL))
+years <- as.numeric(format(dates, "%Y"))
+
+# Crear un dataframe para usar en ggplot
+data <- data.frame(Year = years, Value = as.numeric(NoTendSTL))
+
+# Crear una variable que indica cada 4 años
+data$FourYearPeriod <- (data$Year - min(data$Year)) %/% 4
+
+# Crear el diagrama de cajas
+ggplot(data, aes(x = factor(FourYearPeriod), y = Value)) +
+  geom_boxplot() +
+  xlab("Período de 4 Años") +
+  ylab("Valor") +
+  ggtitle("Diagrama de Cajas por Período de 4 Años") +
+  theme_minimal()
+```
+
+Los primero 4 bloques (0 al 3) muestra una variabilidad relativamente consistente en términos de rango intercuartil.
+
+El bloque 4 parece tener una mayor variabilidad con la caja y los bigotes más extendidos, lo que sugiere una dispersión más amplia de los datos en ese período.
+
+El bloque 5 se muestra bastante diferente, con una caja muy pequeña y pocos datos, lo que podría indicar un bloque incompleto o un período con menos datos disponibles.
+
+```{r BoxPlots, message=FALSE, warning=FALSE}
+library(lubridate)
+ll_tb<-as_tsibble(dif_ll_tsventa,index=tibble(fecha))
+colnames(ll_tb)<-c("Fecha","Dato")
+
+# 
+ll_tb$dia <-wday(ll_tb$Fecha, label = TRUE, abbr = TRUE,week_start = 1)
+ll_tb$mes <- factor(month.abb[month(ll_tb$Fecha)], levels =   month.abb)
+
+ll_tb$mes <- factor(month.abb[month(ll_tb$Fecha)], levels =   month.abb)
+
+# Boxplot diario
+ll_tb%>%mutate(diff_ND=Dato-lag(Dato))%>%plot_seasonal_diagnostics(.date_var = Fecha,.value = diff_ND,.feature_set = c("wday.lbl"),.geom="boxplot")
+# Boxplot mensual
+ll_tb%>%mutate(diff_ND=Dato-lag(Dato))%>%plot_seasonal_diagnostics(.date_var = Fecha,.value = diff_ND,.feature_set = c("month.lbl"),.geom="boxplot")
+# Boxplot Anual
+ll_tb%>%mutate(diff_ND=Dato-lag(Dato))%>%plot_seasonal_diagnostics(.date_var = Fecha,.value = diff_ND,.feature_set = c("year"),.geom="boxplot")
+# Boxplot trimestral
+ll_tb%>%mutate(diff_ND=Dato-lag(Dato))%>%plot_seasonal_diagnostics(.date_var = Fecha,.value = diff_ND,.feature_set = c("quarter"),.geom="boxplot")
+
+
+
+TSstudio::ts_heatmap(ll_tsventa,title = "Mapa de Calor - Venta de oro en Colombia")
+```
+
+Para los diagramas de cajas como característica común, se puede ver que hay presencia de datos atípicos por semana, mes, trimestre y año.
+
+Para los días lunes, martes y miércoles se presenta menor variabilidad en el rango intercuartil, en contraste con los días viernes y sábado. Sin embargo no hay diferencias en términos de la media.
+
+En los meses y trimestres no se presentan cambios respecto a la media ni hay variación entre sus respectivas categorías.
+
+Para el los años de 2008, 2009 , 2015, 2020 hay mayor variación en el rango intercuartil. Sin embargo no hay diferencias en la media.
+
+Respecto al mapa de calor pareciera que hay una intervención que comienza en el 2004 y va hasta el 2012, y del 2013 hasta la fecha.
+
 ###  {.unnumbered}
 
 <!-- ========================================== Sección 4 ==========================================  -->
@@ -479,7 +692,7 @@ knitr::kable(glance(ModelosEstacionalidadLeche), col.names = c('Modelo', '$\\sig
 Observamos que, de todos los aspectos medidos, la regresión dummy parece ser aquella que lo hace mejor por lo cual revisaremos qué coeficientes esta regresión ha estimado:
 
 ```{r Coeficientes Dummy Leche}
-knitr::kable(ModelosEstacionalidadLeche %>% select(Dummy) %>%  coef())
+knitr::kable(ModelosEstacionalidadLeche %>% dplyr::select(Dummy) %>%  coef())
 ```
 
 Note que la variable de base o de comparación es la variable de Enero.
