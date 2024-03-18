@@ -1,0 +1,66 @@
+---
+title: "Avance 2. Series de Tiempo Univariadas"
+subtitle: 'Universidad Nacional de Colombia'
+author: 
+  - name: "Michel Mendivenson Barragán Zabala"
+    email: 'mbarraganz@unal.edu.co'
+  - name: "Sharon Juliana Zambrano Ortiz"
+    email: 'shzambranoo@unal.edu.co'
+  - name: 'Nicolás Alejandro Quenguan Parra'
+    email: 'naquenguanp@unal.edu.co'
+  - name: 'Aryin Jair Torres Quiñones'
+    email: 'artorresq@unal.edu.co'
+date: "`r Sys.Date()`"
+output: 
+  # rmarkdown::github_document
+  html_document:
+    theme: simplex
+    toc: no
+    code_folding: hide
+    highlighting: github
+# always_allow_html: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.align = 'center')
+```
+
+## **Los datos**
+
+```{r LecturayTS}
+leche = readxl::read_xlsx('../Datos/Volumen de Acopio Total  (2008 - 2023).xlsx', 
+                          sheet = 'VOLUMEN REGIONAL Y DEPTAL. ', 
+                          range = 'B29:AF221')
+ts_leche = ts(leche$NACIONAL, start = c(2008,1), frequency = 12)/1000000
+```
+  
+Las dos series escogidas corresponden a:
+  
+-   [La producción de leche mensual en Colombia (En el período 2008 a 2023)](http://uspleche.minagricultura.gov.co/documentos.html)
+-   [El precio de compra o venta diario del oro por gramo (En el período 2010 a Febrero de 2024)](https://www.banrep.gov.co/es/estadisticas/precios-del-dia-para-el-gramo-oro-plata-y-platino)
+
+---
+
+En este avance, se intentará ajustar un modelo de suavizamiento exponencial para cada una de las series así como calcular algunas medidas de precisión del modelo implementado:
+
+---
+
+## **Ajuste del modelo de suavizamiento exponencial:** {.tabset}
+
+### **Serie mensual:** Volumen de leche captada en el país. {.active}
+
+### **Serie diaria:** Precio de venta del oro.
+
+### {.unnumbered}
+
+---
+
+## **Cálculo de algunas medidas de precisión:** {.tabset}
+
+En esta sección se usará el rolling para calcular algunas medidas de precisión.
+
+### **Serie mensual:** Volumen de leche captada en el país. {.active}
+
+### **Serie diaria:** Precio de venta del oro.
+
+### {.unnumbered}
