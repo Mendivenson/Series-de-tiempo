@@ -11,6 +11,7 @@ La entrega final del proyecto será la implementación de una aplicación en R (
 en este repositorio:
 
 - [**Avance 1:**](https://rpubs.com/Mendivenson/Avance1_STdU) Análisis descriptivo de las series de tiempo.
+- [**Avance 2:**]() Modelo de suavizamiento exponencial y medidas de precisión.
 
 ### Datos:
 
@@ -19,7 +20,23 @@ Para el proyecto se usarán dos series (Una de frecuencia diaria y la otra mensu
 - [La producción de leche mensual en Colombia (En el período 2008 a 2023)](http://uspleche.minagricultura.gov.co/documentos.html)
 - [El precio de compra o venta diario del oro por gramo (En el período 2010 a Febrero de 2024)](https://www.banrep.gov.co/es/estadisticas/precios-del-dia-para-el-gramo-oro-plata-y-platino)
 
+---
 
+### To do:
+
+- [ ] **Avance 1:**
+  
+  - [ ] Gráfico correlación en 12 períodos de tiempo (Serie mensual)
+
+- [ ] **Avance 2:**
+  
+  - [ ] Suavizamiento exponencial (Serie mensual)
+  
+  - [ ] Suavizamiento exponencial (Serie diaria)
+  
+  - [ ] Medidas de precisión (Serie mensual)
+  
+  - [ ] Medidas de precisión (Serie diaria)
 
 ---
 
