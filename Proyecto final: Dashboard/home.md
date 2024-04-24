@@ -1,0 +1,1 @@
+Esta página está creada específicamente para hacer de sección de preguntas y respuestas y para dar un preámbulo general de lo que hace la página así como los objetivos que se tendrán a futuro para el proyecto.

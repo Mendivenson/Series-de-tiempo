@@ -1,5 +1,6 @@
 library(shiny)
 library(shinydashboard)
+library(markdown)
 # library(shinydashboardPlus)
 library(shinyjs)
 
@@ -18,12 +19,19 @@ library(shinyjs)
 
 # =========================== MENÚS Y CUERPOS: =================================
 
+# ---> PARA HOME <--- (Explicar la funcionalidad(?) No sé XD)
+menuHome = menuItem('¿Cómo funciona esto?',
+                    tabName = 'home',
+                    icon = icon('lightbulb'))
+bodyHome = tabItem(tabName = 'home', 
+                   fluidPage(withMathJax(includeMarkdown('home.md'))))
+
 
 # ---> PARA LECTURA DE DATOS <---
 
 source('data/data.R')
 
-menuData = menuItem('Lectura de datos principal',
+menuData = menuItem('Datos',
                      tabName = 'data', 
                      icon = icon('database'))
 
@@ -34,7 +42,9 @@ bodyData = tabItem(tabName = 'data',
 
 # ---> ANÁLISIS DESCRIPTIVO <---
 
-menuDescriptive = menuItem('Análisis descriptivo', startExpanded = F,
+source('descriptive/variance/variance.R')
+
+menuDescriptive = menuItem('Análisis descriptivo', tabName = 'descriptive',startExpanded = F,
                            icon = icon('chart-simple'),
                            menuSubItem('Análisis de varianza', 
                                        tabName = 'variance',
@@ -46,7 +56,8 @@ menuDescriptive = menuItem('Análisis descriptivo', startExpanded = F,
                                        tabName = 'season',
                                        icon = icon('calendar-alt')))
 
-bodyDescriptive = list(tabItem(tabName = 'variance', 'variance'),
+bodyDescriptive = list(tabItem(tabName = 'descriptive', 'Prueba'),
+                       tabItem(tabName = 'variance', varianceUI('varianceModule')),
                        tabItem(tabName = 'trend', 'trend'),
                        tabItem(tabName = 'season', 'season'))
 
@@ -76,14 +87,22 @@ bodyDecisionTree = tabItem('decisionTree', 'decisionTree')
 # ¿Aquí se unen todas las renderizaciones del cuerpo en teoría? XD
 bodyItems = tagList( 
   div(class = 'tab-content', 
-      bodyData, bodyDescriptive,bodyExponential,bodyDecisionTree))
+      bodyHome, bodyData, bodyDescriptive,bodyExponential,bodyDecisionTree))
   
   
 ui<- dashboardPage(
   header = dashboardHeader(title = 'Proyecto final. Series de tiempo univariadas',
+                           tags$li(
+                             class = "dropdown",
+                             tags$a(
+                               href = "https://github.com/Mendivenson/Series-de-tiempo/tree/main/Proyecto%20final%3A%20Dashboard",
+                               target = "_blank",
+                               tags$i(class = "fab fa-github", style = "font-size: 22px; line-height: 16px;")  # Adjust the font size as needed
+                             )),
                            titleWidth = 350),
   sidebar = dashboardSidebar(width = 350, # minified = FALSE,
                              sidebarMenu(id = 'tabs',
+                                         
                                     menuData,menuDescriptive,
                                     menuExponential,menuDecisionTree)),
   body = dashboardBody(bodyItems),
@@ -111,8 +130,8 @@ server <- function(input, output) {
   
   
   # ---> Módulos <---
-  callModule(dataServer, "dataModule")
-  # output$IntroData = renderUI({includeMarkdown(path = 'data/data Intro.md')})
+  serie = callModule(dataServer, "dataModule")
+  callModule(varianceServer, 'varianceModule', serie = serie)
 }
 
 # Función para correr la aplicación

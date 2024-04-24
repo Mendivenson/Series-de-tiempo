@@ -1,79 +1,100 @@
-# Este módulo se supone que lo que hará será:
-#   - [x] Leer datos
 #   - [ ] Filtrar datos
-#   - [ ] Seleccionar una columna de los datos para 
-#     hacer de insumo en la serie de tiempo
-#   - [ ] Enseñarme a renderizar archivos md dentro
-#     de mi módulo para presentarlo en la UI
 
 library(shiny)
 library(shinydashboard)
-# library(bslib)
 library(lubridate)
+library(markdown)
 library(DT)
 
 
-dataUI <- function(id) {
-  ns <- NS(id)  # Genera un espacio de nombres único
+# **Nota importante:** Notése que siempre debemos llamar a los objetos de server 
+# dentro de un módulo con ns(). Pues como se llamará en una aplicación más grande
+# ns() es la forma de indicar que se llama de dentro de este módulo.
 
-  fluidPage(
-    fluidRow(column(
-      width = 12,
-      includeMarkdown('data/dataRead.md')
-    )),
-    sidebarLayout(  # Layout con panel lateral y panel principal
-      sidebarPanel(  # Panel lateral
-        fileInput(ns("fileInput"), label = "Cargar archivo CSV", accept = ".csv")  # Cargar archivo CSV
-      ),
-      mainPanel(  # Panel principal
-        # uiOutput('Intro'),
-        DTOutput(ns("dataTable"))
-        # Renderizar tabla con los datos del archivo CSV
-      )
-    ),
-    fluidRow(column(
-      width = 12,
-      includeMarkdown('data/dataVisulization.md')
+# ======================== UI de lectura de datos ==============================
+dataUI <- function(id) {
+  ns <- NS(id)                            # NS: id único en la app principal
+  
+  # INTRODUCCIÓN DE LECTURA DE DATOS
+  
+  fluidPage(                              # shiny::fluidPage página adaptable al tamaño
+    fluidRow(column(                      # shiny::fluidRow una sección adaptable al ancho
+      width = 12,                         # width es una medida relativa (12 = 100%)
+      includeMarkdown('data/dataRead.md') # htmltools:: Función para renderizar documentos externos en la sección
     )),
     
+    # SELECCIÓN Y VISUALIZACIÓN DEL DATAFRAME
+    # sidebarLayout(                        # shiny::sidebarLayout Crea un layour de dos columnas
+    #   sidebarPanel(                       # LLenando una de las columnas (Menos ancha)
+    #     fileInput(ns("fileInput"),        # Esta es una opción propia de shiny. Qué suerte XD
+    #               label = "Cargar archivo CSV",
+    #               accept = ".csv")),
+    #   mainPanel(                          # Llenando el panel principal
+    #     DTOutput(ns("dataTable"))         # Se dibujará una tabla solamente
+    #   )
+    # ),
+    fluidRow(column(fileInput(ns('fileInput'),
+                       label = 'Cargar archivo csv', 
+                       accept = '.csv'), width = 12)),
+    fluidRow(DTOutput(ns('dataTable'))),
+    # INTRODUCCIÓN VISUALIZACIÓN Y LECTURA COMO OBJETO TS
+    
+    fluidRow(column(
+      width = 12,
+      includeMarkdown('data/dataVisualization.md')
+    )),
+    
+    # LECTURA COMO OBJETO TS Y VISUALIZACIÓN:
     sidebarLayout(
       sidebarPanel(
-        selectInput(ns('TimeSerie'), label = 'Seleccione una columna', choices = NULL, selected = character(0)),
-        numericInput(ns('Inicio'), label = 'Año de inicio de la serie', value = NULL,
+        fluidPage(
+        fluidRow(selectInput(ns('TimeSerie'),       # Un selector de columnas del dataframe. ¡Se actualiza en server!
+                    label = 'Seleccione una columna', 
+                    choices = NULL, 
+                    selected = character(0)),
+        numericInput(ns('Inicio'),         # Un selector numérico para el momento en que inicia la serie
+                     label = 'Año de inicio de la serie',
+                     value = NULL,
                      min = 0, max = year(Sys.Date())),
-        numericInput(ns('Recurrencia'), label = '¿Cuántas veces por año se midió la serie?', value = NULL,
-                     min = 0),
-        checkboxInput(ns('LineasV'),'¿Agregar líneas verticales en cada año?', value = FALSE)),
-    mainPanel(plotOutput(ns('linePlot')))
-    ),
+        numericInput(ns('Recurrencia'),    # Un selector numérico para pasar más adelante a frequency en ts
+                     label = '¿Cuántas veces por año se midió la serie?', 
+                     value = NULL,
+                     min = 1),
+        checkboxInput(ns('LineasV'),       # Una checkbox para dibujar o no elementos de la serie de tiempo
+                      '¿Agregar líneas verticales en cada año?',
+                      value = FALSE)),
+        fluidRow(uiOutput(ns('serieInfo')))# Mostrar infomración de cuántas observaciones fueron leídas  
+        )),
+      mainPanel(
+        plotOutput(ns('linePlot'))
+      ) ),
+  
     
     fluidRow(column(
-      width = 12,
-      includeMarkdown('data/dataNotes.md')
+      width = 12,                          # withMathJax renderiza ecuaciones de LaTeX
+      withMathJax(includeMarkdown('data/dataNotes.md'))
     ))
   )
 }
 
 
-# dataUI = function(id){
-#   ns = NS(id)
-#   fluidPage(
-#     titlePanel('Lectura de datos')
-#   )
-# }
 
+# ====================== server de lectura de datos ============================
 
 dataServer <- function(input, output, session) {
   
+  # Leer los datos con la ruta dada en fileInput
   data = reactive({
     req(input$fileInput)
     read.csv(input$fileInput$datapath)
   })
   
+  # Actualizar el menú de selección de las columnas
   observe({
     updateSelectInput(session, "TimeSerie", choices = colnames(data()), selected = character(0))
   })
   
+  # Generar la serie cuando se seleccionen la la columna, el inicio y la frecuencia de la serie
   serie = reactive({
     req(input$TimeSerie)
     req(input$Inicio)
@@ -83,27 +104,35 @@ dataServer <- function(input, output, session) {
        frequency = input$Recurrencia)
   })
   
+  # Caja de información con cuántas observaciones tiene la serie
+  output$serieInfo <- renderUI(valueBox(length(serie()),
+                                        subtitle = 'Observaciones',
+                                        icon = icon('hashtag'), 
+                                        width = 12))
   
-    
+  # Renderizar el dataframe leído   
   output$dataTable = renderDT({
     datatable(data())
   })
   
+  # Renderizar el gráfico de líneas
   output$linePlot <- renderPlot({
     req(input$TimeSerie)
     req(input$Inicio)
     req(input$Recurrencia)
-    # req(input$LineasV)
-    # tiempos = time(serie())
-    # tiempos = tiempos[tiempos %% 1 == 0]
+    
     plot.ts(serie(),
          main= input$fileInput$name,
          xlab = "Index",
          ylab = 'Value')
-    if (input$LineasV){
+    
+    if (input$LineasV){       # ¿Se desean líneas verticales?
       abline(v = time(serie())[time(serie()) %% 1 == 0],
              lty = 'dashed', col = '#FFA07A')
     }
     
   })
+  # Es importante este return. Llamaremos ese objeto para los otros módulos.
+  return(serie)
+  
 }
