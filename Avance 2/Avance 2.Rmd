@@ -47,7 +47,20 @@ En este avance, se intentará ajustar un modelo de suavizamiento exponencial par
 
 ## **Ajuste del modelo de suavizamiento exponencial:** {.tabset}
 
+Para el ajuste del suavizamiento exponencial tomaremos las series originales (O transformadas para la estabilización de la varianza) para revisar si el método estima la tendencia y la estacionalidad del proceso.
+
 ### **Serie mensual:** Volumen de leche captada en el país. {.active}
+
+Se plantearán dos modelos:
+
+- $a_{t} = \alpha x_t + (1 - \alpha) a_{t-1}$
+- $\alpha$
+
+
+```{r PrimerModelo,}
+
+```
+
 
 ### **Serie diaria:** Precio de venta del oro.
 
@@ -55,12 +68,28 @@ En este avance, se intentará ajustar un modelo de suavizamiento exponencial par
 
 ---
 
-## **Cálculo de algunas medidas de precisión:** {.tabset}
-
-En esta sección se usará el rolling para calcular algunas medidas de precisión.
+## **Elección de retardos** {.tabset}
 
 ### **Serie mensual:** Volumen de leche captada en el país. {.active}
 
 ### **Serie diaria:** Precio de venta del oro.
 
 ### {.unnumbered}
+
+## **Arbolés de decisión** {.tabset}
+
+### **Serie mensual:** Volumen de leche captada en el país. {.active}
+
+### **Serie diaria:** Precio de venta del oro.
+
+### {.unnumbered}
+
+
+```{python}
+# En R se debe instalar el paquete reticulate
+# install.package('reticulate')
+# Prueba python
+imprimir = True
+if imprimir:
+  print('Funciona XD')
+```

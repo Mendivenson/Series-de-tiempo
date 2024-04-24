@@ -12,6 +12,7 @@ en este repositorio:
 
 - [**Avance 1:**](https://rpubs.com/Mendivenson/Avance1_STdU) Análisis descriptivo de las series de tiempo.
 - [**Avance 2:**]() Modelo de suavizamiento exponencial y medidas de precisión.
+- [**Proyecto final:**](https://y688a9-michel0mendivenson-barragan0zabala.shinyapps.io/TimeSeriesDashboard/) Dashboard para análisis y predicción básica de series de tiempo con los métodos vistos en clase.
 
 ### Datos:
 
