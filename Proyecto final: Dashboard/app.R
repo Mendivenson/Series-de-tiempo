@@ -1,7 +1,6 @@
 library(shiny)
 library(shinydashboard)
 library(markdown)
-# library(shinydashboardPlus)
 library(shinyjs)
 
 
@@ -31,9 +30,9 @@ bodyHome = tabItem(tabName = 'home',
 
 source('data/data.R')
 
-menuData = menuItem('Datos',
-                     tabName = 'data', 
-                     icon = icon('database'))
+menuData = menuItem('Visualización',
+                    tabName = 'data', 
+                    icon = icon('database'))
 
 bodyData = tabItem(tabName = 'data', 
                    # uiOutput('IntroData'),
@@ -43,22 +42,28 @@ bodyData = tabItem(tabName = 'data',
 # ---> ANÁLISIS DESCRIPTIVO <---
 
 source('descriptive/variance/variance.R')
+source('descriptive/trend/trend.R')
 
-menuDescriptive = menuItem('Análisis descriptivo', tabName = 'descriptive',startExpanded = F,
+menuDescriptive = menuItem('Análisis descriptivo',startExpanded = F,
                            icon = icon('chart-simple'),
-                           menuSubItem('Análisis de varianza', 
+                           
+                           # ---> Varianza
+                           menuSubItem('Análisis de la varianza', 
                                        tabName = 'variance',
                                        icon = icon('crosshairs')),
-                           menuSubItem('Tendencia', 
+                           
+                           # ---> Tendencia
+                           menuSubItem('Análisis de la tendencia', 
                                        tabName = 'trend',
                                        icon = icon('line-chart')),
+                           
+                           # ---> Estacionalidad
                            menuSubItem('Estacionalidad', 
                                        tabName = 'season',
                                        icon = icon('calendar-alt')))
 
-bodyDescriptive = list(tabItem(tabName = 'descriptive', 'Prueba'),
-                       tabItem(tabName = 'variance', varianceUI('varianceModule')),
-                       tabItem(tabName = 'trend', 'trend'),
+bodyDescriptive = list(tabItem(tabName = 'variance', varianceUI('varianceModule')),
+                       tabItem(tabName = 'trend', trendUI('trendModule')),
                        tabItem(tabName = 'season', 'season'))
 
 
@@ -88,8 +93,8 @@ bodyDecisionTree = tabItem('decisionTree', 'decisionTree')
 bodyItems = tagList( 
   div(class = 'tab-content', 
       bodyHome, bodyData, bodyDescriptive,bodyExponential,bodyDecisionTree))
-  
-  
+
+
 ui<- dashboardPage(
   header = dashboardHeader(title = 'Proyecto final. Series de tiempo univariadas',
                            tags$li(
@@ -100,24 +105,26 @@ ui<- dashboardPage(
                                tags$i(class = "fab fa-github", style = "font-size: 22px; line-height: 16px;")  # Adjust the font size as needed
                              )),
                            titleWidth = 350),
-  sidebar = dashboardSidebar(width = 350, # minified = FALSE,
-                             sidebarMenu(id = 'tabs',
-                                         
-                                    menuData,menuDescriptive,
-                                    menuExponential,menuDecisionTree)),
+  sidebar = dashboardSidebar(
+    width = 350,
+    sidebarMenu(
+      id = 'tabs',
+      menuHome, menuData, menuDescriptive, menuExponential, menuDecisionTree
+    )),
   body = dashboardBody(bodyItems),
-    useShinyjs()
+  useShinyjs()
 )
 # *************************** SERVER PRINCIPAL *********************************
 
 server <- function(input, output) {
   # Código para no esconder los íconos
-  runjs({'
+  runjs('
         var el2 = document.querySelector(".skin-blue");
         el2.className = "skin-blue sidebar-mini";
         var clicker = document.querySelector(".sidebar-toggle");
         clicker.id = "switchState";
-    '})
+        ');
+  
   
   onclick('switchState', runjs({'
         var title = document.querySelector(".logo")
@@ -131,8 +138,17 @@ server <- function(input, output) {
   
   # ---> Módulos <---
   serie = callModule(dataServer, "dataModule")
-  callModule(varianceServer, 'varianceModule', serie = serie)
+  serieNoVar = callModule(varianceServer, 'varianceModule', serie = serie)
+  callModule(trendServer, 'trendModule', serie = serieNoVar$serie)
+  
+  # ActualidadSerie = reactive({
+  #   lista = list()
+  #   if (serieNoVar()[2]){
+  #     lista = c(lista, 'Transformación de Box Cox debido a varianza')
+  #   }
+  # })
 }
 
 # Función para correr la aplicación
 shinyApp(ui = ui, server = server)
+

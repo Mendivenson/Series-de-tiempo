@@ -5,20 +5,25 @@ library(shinydashboard)
 library(lubridate)
 library(markdown)
 library(DT)
+library(plotly)
+library(TSstudio)
 
 
-# **Nota importante:** Notése que siempre debemos llamar a los objetos de server 
+# **Nota importante:** Notése que siempre debemos llamar a los objetos de server
 # dentro de un módulo con ns(). Pues como se llamará en una aplicación más grande
 # ns() es la forma de indicar que se llama de dentro de este módulo.
 
 # ======================== UI de lectura de datos ==============================
 dataUI <- function(id) {
-  ns <- NS(id)                            # NS: id único en la app principal
+  ns <-
+    NS(id)                            # NS: id único en la app principal
   
   # INTRODUCCIÓN DE LECTURA DE DATOS
   
-  fluidPage(                              # shiny::fluidPage página adaptable al tamaño
-    fluidRow(column(                      # shiny::fluidRow una sección adaptable al ancho
+  fluidPage(
+    # shiny::fluidPage página adaptable al tamaño
+    fluidRow(column(
+      # shiny::fluidRow una sección adaptable al ancho
       width = 12,                         # width es una medida relativa (12 = 100%)
       includeMarkdown('data/dataRead.md') # htmltools:: Función para renderizar documentos externos en la sección
     )),
@@ -33,9 +38,12 @@ dataUI <- function(id) {
     #     DTOutput(ns("dataTable"))         # Se dibujará una tabla solamente
     #   )
     # ),
-    fluidRow(column(fileInput(ns('fileInput'),
-                       label = 'Cargar archivo csv', 
-                       accept = '.csv'), width = 12)),
+    fluidRow(column(
+      fileInput(ns('fileInput'),
+                label = 'Cargar archivo csv',
+                accept = '.csv'),
+      width = 12
+    )),
     fluidRow(DTOutput(ns('dataTable'))),
     # INTRODUCCIÓN VISUALIZACIÓN Y LECTURA COMO OBJETO TS
     
@@ -45,36 +53,42 @@ dataUI <- function(id) {
     )),
     
     # LECTURA COMO OBJETO TS Y VISUALIZACIÓN:
-    sidebarLayout(
-      sidebarPanel(
-        fluidPage(
-        fluidRow(selectInput(ns('TimeSerie'),       # Un selector de columnas del dataframe. ¡Se actualiza en server!
-                    label = 'Seleccione una columna', 
-                    choices = NULL, 
-                    selected = character(0)),
-        numericInput(ns('Inicio'),         # Un selector numérico para el momento en que inicia la serie
-                     label = 'Año de inicio de la serie',
-                     value = NULL,
-                     min = 0, max = year(Sys.Date())),
-        numericInput(ns('Recurrencia'),    # Un selector numérico para pasar más adelante a frequency en ts
-                     label = '¿Cuántas veces por año se midió la serie?', 
-                     value = NULL,
-                     min = 1),
-        checkboxInput(ns('LineasV'),       # Una checkbox para dibujar o no elementos de la serie de tiempo
-                      '¿Agregar líneas verticales en cada año?',
-                      value = FALSE)),
-        fluidRow(uiOutput(ns('serieInfo')))# Mostrar infomración de cuántas observaciones fueron leídas  
-        )),
-      mainPanel(
-        plotOutput(ns('linePlot'))
-      ) ),
-  
+    sidebarLayout(sidebarPanel(
+      fluidPage(
+        fluidRow(
+          selectInput(
+            ns('TimeSerie'),
+            # Un selector de columnas del dataframe. ¡Se actualiza en server!
+            label = 'Seleccione una columna',
+            choices = NULL,
+            selected = character(0)
+          ),
+          numericInput(
+            ns('Inicio'),
+            # Un selector numérico para el momento en que inicia la serie
+            label = 'Año de inicio de la serie',
+            value = 2008,
+            min = 0,
+            max = year(Sys.Date())
+          ),
+          numericInput(
+            ns('Recurrencia'),
+            # Un selector numérico para pasar más adelante a frequency en ts
+            label = '¿Cuántas veces por año se midió la serie?',
+            value = 12,
+            min = 1
+          ),
+          fluidRow(uiOutput(ns('serieInfo')))# Mostrar infomración de cuántas observaciones fueron leídas
+        )
+      )),
+      mainPanel(plotlyOutput(ns('linePlot')))
+    ),
+    
     
     fluidRow(column(
       width = 12,                          # withMathJax renderiza ecuaciones de LaTeX
       withMathJax(includeMarkdown('data/dataNotes.md'))
-    ))
-  )
+    )))
 }
 
 
@@ -82,7 +96,6 @@ dataUI <- function(id) {
 # ====================== server de lectura de datos ============================
 
 dataServer <- function(input, output, session) {
-  
   # Leer los datos con la ruta dada en fileInput
   data = reactive({
     req(input$fileInput)
@@ -91,7 +104,10 @@ dataServer <- function(input, output, session) {
   
   # Actualizar el menú de selección de las columnas
   observe({
-    updateSelectInput(session, "TimeSerie", choices = colnames(data()), selected = character(0))
+    updateSelectInput(session,
+                      "TimeSerie",
+                      choices = colnames(data()),
+                      selected = character(0))
   })
   
   # Generar la serie cuando se seleccionen la la columna, el inicio y la frecuencia de la serie
@@ -100,36 +116,36 @@ dataServer <- function(input, output, session) {
     req(input$Inicio)
     req(input$Recurrencia)
     ts(data()[, input$TimeSerie],
-       start = input$Inicio, 
+       start = input$Inicio,
        frequency = input$Recurrencia)
   })
   
   # Caja de información con cuántas observaciones tiene la serie
-  output$serieInfo <- renderUI(valueBox(length(serie()),
-                                        subtitle = 'Observaciones',
-                                        icon = icon('hashtag'), 
-                                        width = 12))
+  output$serieInfo <- renderUI(valueBox(
+    length(serie()),
+    subtitle = 'Observaciones',
+    icon = icon('hashtag'),
+    width = 12
+  ))
   
-  # Renderizar el dataframe leído   
+  # Renderizar el dataframe leído
   output$dataTable = renderDT({
     datatable(data())
   })
   
   # Renderizar el gráfico de líneas
-  output$linePlot <- renderPlot({
+  output$linePlot <- renderPlotly({
     req(input$TimeSerie)
     req(input$Inicio)
     req(input$Recurrencia)
     
-    plot.ts(serie(),
-         main= input$fileInput$name,
-         xlab = "Index",
-         ylab = 'Value')
-    
-    if (input$LineasV){       # ¿Se desean líneas verticales?
-      abline(v = time(serie())[time(serie()) %% 1 == 0],
-             lty = 'dashed', col = '#FFA07A')
-    }
+    ts_plot(
+      serie(),
+      title = input$fileInput$name,
+      Xtitle = "Index",
+      Ytitle = 'Value',
+      slider = T, Xgrid = T, Ygrid = T
+    )
     
   })
   # Es importante este return. Llamaremos ese objeto para los otros módulos.

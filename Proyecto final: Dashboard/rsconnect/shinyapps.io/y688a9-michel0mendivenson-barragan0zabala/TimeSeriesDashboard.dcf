@@ -1,0 +1,12 @@
+name: TimeSeriesDashboard
+title: TimeSeriesDashboard
+username: y688a9-michel0mendivenson-barragan0zabala
+account: y688a9-michel0mendivenson-barragan0zabala
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 11825646
+bundleId: 8547900
+url: https://y688a9-michel0mendivenson-barragan0zabala.shinyapps.io/TimeSeriesDashboard/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE

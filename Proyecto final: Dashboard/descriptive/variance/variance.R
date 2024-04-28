@@ -1,25 +1,27 @@
 library(easypackages)
-libraries(c("shiny", "shinydashboard", "markdown", "MASS", "latex2exp"))
+libraries(c("shiny", "shinydashboard", "markdown", 
+            "MASS", 'TSstudio', 'plotly'))
 
 
 # ====================== UI de análisis de la varianza =========================
 
 varianceUI <- function(id) {
   ns <- NS(id)
+  pdf(NULL)
   fluidPage(
     includeMarkdown('descriptive/variance/varianceIntro.md'),
     h2('Box-Cox para la serie original'),
     fluidRow(
       column(numericInput(
-        ns('Min'),label = HTML('Seleccione el menor valor posible para \\(\\lambda\\)'),min = -20,value = NULL),
+        ns('Min'),label = HTML('Seleccione el menor valor posible para \\(\\lambda\\)'),min = -20,value = -3),
       width = 4),
       column(numericInput(
-        ns('Max'),max = 20,value = NULL,
+        ns('Max'),max = 20,value = 3,
         label = HTML('Seleccione el mayor valor posible para \\(\\lambda\\)')),
       width = 4),
       column(
         numericInput(
-          ns('Iter'),min = 20,max = 1000,value = NULL,
+          ns('Iter'),min = 20,max = 1000,value = 200,
           label = '¿Cuántos valores de \\(\\lambda\\) desea probar?',),
         width = 4) ),
     sidebarLayout(
@@ -41,7 +43,13 @@ varianceUI <- function(id) {
       ns = ns,
       fluidPage(
         h2('Comparación serie original vs serie transformada'),
-        plotOutput(ns('Comparativa')),
+        fluidRow(
+          column(width = 6,
+                 plotlyOutput(ns('Comparativa1'))),
+          
+          column(width = 6,
+                 plotlyOutput(ns('Comparativa2')))
+        ),
         h2(HTML('Cálculo \\(\\lambda\\) para la serie transformada')),
         plotOutput(ns('boxcox2'))
       )
@@ -152,17 +160,30 @@ varianceServer <- function(input, output, session, serie) {
      boxcox(SerieNoVar() ~ 1, seq(-1,3, length = input$Iter))
    })
 
-   output$Comparativa = renderPlot({
+   output$Comparativa1 = renderPlotly({
      if (input$transformar) {
-       par(mfrow = c(1, 2))
-       plot.ts(serie(), main = 'Serie original', ylab = '')
-       plot.ts(SerieNoVar(), main = 'Serie transformada', ylab = '')
+       # par(mfrow = c(1, 2))
+       ts_plot(serie(), title = 'Serie original', Xtitle = '', slider = T,
+               Xgrid = T,Ygrid = T)
+     }
+   })
+   
+   output$Comparativa2 = renderPlotly({
+     if (input$transformar){
+       ts_plot(SerieNoVar(), title = 'Serie transformada', Xtitle = '', slider = T,
+               Xgrid = T,Ygrid = T)
      }
    })
   
   Final = reactive({if (input$transformar){
-    SerieNoVar
-  } else {serie()}})
+    SerieNoVar()
+  } else {serie}})
   
-  return(Final)
+  return( list( serie = reactive({
+    if (input$transformar){
+      SerieNoVar()
+    } else {
+      serie()
+    }
+  }), check = reactive({input$transformar})))
 }
