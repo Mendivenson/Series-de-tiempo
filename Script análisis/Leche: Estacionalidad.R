@@ -4,7 +4,7 @@ setwd(here())
 
 # Lectura de los datos sin tendencia kernel
 source('Script análisis/Leche: Eliminación de la tendencia.R')
-rm(list = ls()[ls() != 'leche'])
+# rm(list = ls()[ls() != 'leche'])
 # == Tenga en cuenta que, para cualquier análisis de la estacionalidad es 
 # == necesario eliminar la tendencia de la serie primero por eso cargamos los datos
 # == con la tendencia eliminada
@@ -42,7 +42,7 @@ for (i in 1:3){
 Dummy = lm(as.numeric(leche) ~ as.factor(rep(1:12, 16)))
 
 # Gráfica de la serie
-par(mfrow = c(1,2))
+par(mfrow = c(2,1))
 
 plot.ts(leche, ylab = 'Volumen', xlab = 'Tiempo',
         main = 'Volumen de leche producido en Colombia')
@@ -53,7 +53,7 @@ abline(v = 2008:2024, col = 'gray', lty = 'dashed', lwd = 1.5)
 
 plot(x = time(leche)[1:192],y = Dummy$residuals, ylab = 'Volumen', xlab = 'Tiempo',
         main = 'Volumen de leche producido en Colombia', type = 'l')
-mtext(bquote(bold('Sin tendencia y desestacionalizada')), side = 1, line = -10.6, 
+mtext(bquote(bold('Sin tendencia y desestacionalizada')), side = 1, line = -17, 
       adj = 0.5, cex = 0.8, col = 'darkgray')
 abline(v = 2008:2024, col = 'gray', lty = 'dashed', lwd = 1.5)
 

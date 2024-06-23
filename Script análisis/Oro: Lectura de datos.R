@@ -24,6 +24,6 @@ plot.ts(oro, col = 'darkblue',
 
 
 # Guardado de la serie de tiempo como serie de tiempo 
-saveRDS(leche, 'Datos/Oro.rds')
+saveRDS(oro, 'Datos/Oro.rds')
 
 
