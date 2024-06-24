@@ -13,7 +13,7 @@ library(shinyjs)
 # **Nota:** Si una pestaña aparece como expandible aún cuando no debería probablemente
 # tabname esté mal escrito XD
 
-
+# setwd('Documents/GitHub/Time_series/Proyecto final: Dashboard')
 # ***************************** UI PRINCIPAL ***********************************
 
 # =========================== MENÚS Y CUERPOS: =================================
