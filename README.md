@@ -11,7 +11,7 @@ La entrega final del proyecto será la implementación de una aplicación en R (
 en este repositorio:
 
 - [**Avance 1:**](https://rpubs.com/Mendivenson/Avance1_STdU) Análisis descriptivo de las series de tiempo.
-- [**Avance 2:**]() Modelo de suavizamiento exponencial y medidas de precisión.
+- [**Avance 2:**](https://github.com/Mendivenson/Series-de-tiempo/blob/main/Avance%202/Avance%202.ipynb) Filtro de suavizamiento exponencial, árboles de decisión y redes neuronales.
 - [**Proyecto final:**](https://y688a9-michel0mendivenson-barragan0zabala.shinyapps.io/TimeSeriesDashboard/) Dashboard para análisis y predicción básica de series de tiempo con los métodos vistos en clase.
 
 ### Datos:
@@ -20,27 +20,3 @@ Para el proyecto se usarán dos series (Una de frecuencia diaria y la otra mensu
 
 - [La producción de leche mensual en Colombia (En el período 2008 a 2023)](http://uspleche.minagricultura.gov.co/documentos.html)
 - [El precio de compra o venta diario del oro por gramo (En el período 2010 a Febrero de 2024)](https://www.banrep.gov.co/es/estadisticas/precios-del-dia-para-el-gramo-oro-plata-y-platino)
-
----
-
-### To do:
-
-- [ ] **Avance 1:**
-  
-  - [ ] Gráfico correlación en 12 períodos de tiempo (Serie mensual)
-
-- [ ] **Avance 2:**
-  
-  - [ ] Suavizamiento exponencial (Serie mensual)
-  
-  - [ ] Suavizamiento exponencial (Serie diaria)
-  
-  - [ ] Medidas de precisión (Serie mensual)
-  
-  - [ ] Medidas de precisión (Serie diaria)
-
----
-
-**Nota 1:** Hacer todo dentro de ```.Rmd``` se ve bonito. Sin embargo, es una mucho mejor idea hacer los scripts por aparte de cada cosa y después llamar los resultados dentro del ```html```. De esa forma mucho del código innecesario (Como el de las gráficas boxplot) ni se ve en el documento final ni ocupa espacio en el archivo ```.Rmd```
-
-**Nota 2:** Creo que, de hecho, hay una opción dentro de los chunks de código de ``R`` que permite a los chunks imprimir código de otros scripts. [Puede revisarse acá](https://stackoverflow.com/questions/52397430/include-code-from-an-external-r-script-run-in-display-both-code-and-output)
