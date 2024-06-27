@@ -20,3 +20,14 @@ Para el proyecto se usarán dos series (Una de frecuencia diaria y la otra mensu
 
 - [La producción de leche mensual en Colombia (En el período 2008 a 2023)](http://uspleche.minagricultura.gov.co/documentos.html)
 - [El precio de compra o venta diario del oro por gramo (En el período 2010 a Febrero de 2024)](https://www.banrep.gov.co/es/estadisticas/precios-del-dia-para-el-gramo-oro-plata-y-platino)
+
+
+### Pendientes para avance 2:
+  - [x] Análisis descriptivo volumen de acopio leche
+  - [ ] Análisis desciptivo precio del oro (En progreso)
+  - [ ] Filtro exponencial volumen de acopio leche
+  - [ ] Filtro exponencial precio del oro
+  - [x] Árbol de decisión volumen de acopio leche
+  - [ ] Árbol de decisión precio del oro (En progreso)
+  - [ ] Aplicación red neuronal volumen de acopio leche
+  - [ ] Aplicación red neuronal precio del oro
