@@ -24,8 +24,8 @@ Para el proyecto se usarán dos series (Una de frecuencia diaria y la otra mensu
 
 ### Pendientes para avance 2:
   - [x] Análisis descriptivo volumen de acopio leche
-  - [ ] Análisis desciptivo precio del oro (En progreso)
-  - [ ] Filtro exponencial volumen de acopio leche
+  - [x] Análisis desciptivo precio del oro (En progreso)
+  - [x] Filtro exponencial volumen de acopio leche
   - [ ] Filtro exponencial precio del oro
   - [x] Árbol de decisión volumen de acopio leche
   - [ ] Árbol de decisión precio del oro (En progreso)
