@@ -28,6 +28,7 @@ Para el proyecto se usarán dos series (Una de frecuencia diaria y la otra mensu
   - [x] Filtro exponencial volumen de acopio leche
   - [ ] Filtro exponencial precio del oro
   - [x] Árbol de decisión volumen de acopio leche
+    - [ ] Corregir medidas de precisión para varios pasos adelante
   - [ ] Árbol de decisión precio del oro (En progreso)
   - [ ] Aplicación red neuronal volumen de acopio leche
   - [ ] Aplicación red neuronal precio del oro
